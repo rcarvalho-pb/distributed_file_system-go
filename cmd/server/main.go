@@ -7,13 +7,11 @@ import (
 )
 
 func main() {
-	println("test")
-	port := ":3000"
-	decoder := &p2p.TCPDecoder{}
+	log.Println("Starting on port 3000")
 	opts := p2p.TCPTransportOpts{
-		ListenAddr:    port,
+		ListenAddr:    ":3000",
 		HandshakeFunc: p2p.NOOPHandshake,
-		Decoder:       decoder,
+		Decoder:       p2p.GobDecodeFunc,
 	}
 	tr := p2p.NewTCPTransport(opts)
 	if err := tr.ListenAndAccept(); err != nil {
