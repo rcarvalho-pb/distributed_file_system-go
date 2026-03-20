@@ -7,6 +7,7 @@ import (
 )
 
 func main() {
+	println("test")
 	port := ":3000"
 	decoder := &p2p.TCPDecoder{}
 	opts := p2p.TCPTransportOpts{
