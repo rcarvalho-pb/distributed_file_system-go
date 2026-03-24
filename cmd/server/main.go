@@ -10,8 +10,8 @@ func main() {
 	log.Println("Starting on port 3000")
 	opts := p2p.TCPTransportOpts{
 		ListenAddr:    ":3000",
-		HandshakeFunc: p2p.NOOPHandshake,
-		Decoder:       p2p.GobDecodeFunc,
+		HandshakeFunc: p2p.NOOPHandshakeFunc,
+		Decoder:       p2p.DefaultDecodeFunc,
 	}
 	tr := p2p.NewTCPTransport(opts)
 	if err := tr.ListenAndAccept(); err != nil {

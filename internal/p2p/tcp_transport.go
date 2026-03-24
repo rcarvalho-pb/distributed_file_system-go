@@ -3,11 +3,12 @@ package p2p
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"sync"
 )
 
-var ErrInvalidHandshake error = errors.New("invalid handshake")
+var ErrInvalidPayload error = errors.New("invalid payload to decode")
 
 type TCPPeer struct {
 	conn     net.Conn
@@ -24,7 +25,7 @@ func NewTCPPeer(conn net.Conn, outbount bool) *TCPPeer {
 type TCPTransportOpts struct {
 	ListenAddr    string
 	HandshakeFunc HandshakeFunc
-	Decoder       Decoder
+	Decoder       DecodeFunc
 }
 
 type TCPTransport struct {
@@ -61,29 +62,26 @@ func (t *TCPTransport) startAcceptLoop() {
 	}
 }
 
-func (t *TCPTransport) handleConn(conn net.Conn) error {
+func (t *TCPTransport) handleConn(conn net.Conn) {
 	peer := NewTCPPeer(conn, true)
 	defer conn.Close()
 
 	if err := t.HandshakeFunc(peer); err != nil {
-		conn.Close()
-		return ErrInvalidHandshake
+		fmt.Printf("TCP handshake error: %s\n", ErrInvalidHandshake)
+		return
 	}
 
-	// msg := &Message{}
-	buf := make([]byte, 2000)
+	msg := &Message{}
 	for {
-		n, err := conn.Read(buf)
-		if err != nil {
-			fmt.Printf("TCP error: %s\n", err)
-			break
+		if err := t.Decoder(conn, msg); err != nil {
+			if err == io.EOF {
+				fmt.Printf("TCP connection ended in remote side\n")
+				return
+			}
+			fmt.Printf("TCP decode error: %s\n", ErrInvalidPayload)
+			return
 		}
-
-		fmt.Println("message:", string(buf[:n]))
-		// if err := t.Decoder.Decode(conn, msg); err != nil {
-		// 	fmt.Printf("TCP error from decoder in handleConn: %s\n", err)
-		// 	continue
-		// }
+		msg.From = conn.RemoteAddr()
+		fmt.Printf("message: %+v\n", msg)
 	}
-	return nil
 }
