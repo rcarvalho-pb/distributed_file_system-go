@@ -12,8 +12,17 @@ func main() {
 		ListenAddr:    ":3000",
 		HandshakeFunc: p2p.NOOPHandshakeFunc,
 		Decoder:       p2p.DefaultDecodeFunc,
+		OnPeer:        p2p.OnPeerFunc,
 	}
 	tr := p2p.NewTCPTransport(opts)
+
+	go func() {
+		for {
+			msg := <-tr.Consume()
+			log.Printf("%+v\n", msg)
+		}
+	}()
+
 	if err := tr.ListenAndAccept(); err != nil {
 		log.Fatal(err)
 	}

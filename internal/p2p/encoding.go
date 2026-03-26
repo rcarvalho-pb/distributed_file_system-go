@@ -5,19 +5,19 @@ import (
 	"io"
 )
 
-type DecodeFunc func(io.Reader, *Message) error
+type DecodeFunc func(io.Reader, *RPC) error
 
-func GOBDecodeFunc(r io.Reader, m *Message) error {
-	return gob.NewDecoder(r).Decode(m)
+func GOBDecodeFunc(r io.Reader, rpc *RPC) error {
+	return gob.NewDecoder(r).Decode(rpc)
 }
 
-func DefaultDecodeFunc(r io.Reader, m *Message) error {
+func DefaultDecodeFunc(r io.Reader, rpc *RPC) error {
 	buf := make([]byte, 1028)
 	n, err := r.Read(buf)
 	if err != nil {
 		return err
 	}
 
-	m.Payload = buf[:n]
+	rpc.Payload = buf[:n]
 	return nil
 }
