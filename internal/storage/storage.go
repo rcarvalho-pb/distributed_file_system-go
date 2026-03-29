@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"encoding/hex"
-	"fmt"
 	"io"
 	"log"
 	"os"
+	"path"
 	"strings"
 )
+
+const DEFAULT_ROOT_FOLDER = "ggnetwork"
 
 type PathTransformFunc func(string) PathKey
 
@@ -27,7 +29,7 @@ func CASPathTransformFunc(key string) PathKey {
 	}
 
 	return PathKey{
-		PathName: strings.Join(paths, "/"),
+		PathName: path.Join(paths...),
 		Filename: hashString,
 	}
 }
@@ -45,10 +47,12 @@ type PathKey struct {
 }
 
 func (p PathKey) FullPath() string {
-	return fmt.Sprintf("%s/%s", p.PathName, p.Filename)
+	return path.Join(p.PathName, p.Filename)
 }
 
 type StoreOpts struct {
+	// Root is the folder name of the root, containing all the files and folders of the system
+	Root              string
 	PathTransformFunc PathTransformFunc
 }
 
@@ -57,6 +61,14 @@ type Store struct {
 }
 
 func NewStore(opts StoreOpts) *Store {
+	if opts.PathTransformFunc == nil {
+		opts.PathTransformFunc = DefaultTransformFunc
+	}
+
+	if len(opts.Root) == 0 {
+		opts.Root = DEFAULT_ROOT_FOLDER
+	}
+
 	return &Store{
 		StoreOpts: opts,
 	}
@@ -64,7 +76,7 @@ func NewStore(opts StoreOpts) *Store {
 
 func (s *Store) Delete(key string) error {
 	pathKey := s.PathTransformFunc(key)
-	fullPath := pathKey.FullPath()
+	fullPath := path.Join(s.Root, pathKey.FullPath())
 
 	defer log.Printf("deleted [%s] from disk\n", pathKey.Filename)
 
@@ -86,17 +98,20 @@ func (s *Store) Read(key string) (io.Reader, error) {
 func (s *Store) readStream(key string) (io.ReadCloser, error) {
 	pathKey := s.PathTransformFunc(key)
 
-	return os.Open(pathKey.FullPath())
+	fullPath := path.Join(s.Root, pathKey.FullPath())
+	return os.Open(fullPath)
 }
 
 func (s *Store) writeStream(key string, r io.Reader) error {
 	pathKey := s.PathTransformFunc(key)
 
-	if err := os.MkdirAll(pathKey.PathName, os.ModePerm); err != nil {
+	completePath := path.Join(s.Root, pathKey.PathName)
+
+	if err := os.MkdirAll(completePath, os.ModePerm); err != nil {
 		return err
 	}
 
-	fullPath := pathKey.FullPath()
+	fullPath := path.Join(s.Root, pathKey.FullPath())
 
 	f, err := os.Create(fullPath)
 	if err != nil {
