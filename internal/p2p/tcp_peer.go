@@ -19,6 +19,5 @@ func (p *TCPPeer) Close() error {
 }
 
 func OnPeerFunc(peer Peer) error {
-	peer.Close()
 	return nil
 }
